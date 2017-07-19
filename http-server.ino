@@ -14,6 +14,41 @@ const int DIGITAL_PIN = 12; // Digital pin to be read
 
 WiFiServer server(80);
 
+const char controlPage[] PROGMEM = "<button id='led-on'>"
+"On"
+"</button>"
+"<br><br>"
+"<button id='led-off'>"
+"Off"
+"</button>"
+"<script>"
+"var xhr = new XMLHttpRequest(),"
+"    onButton = document.getElementById('led-on'),"
+"    offButton = document.getElementById('led-off');"
+""
+"onButton.addEventListener('click', function() {"
+"  led('1');"
+"});"
+"offButton.addEventListener('click', function() {"
+"  led('0');"
+"});"
+""
+"function led(action) {"
+"  xhr.open('GET', '/led/'+action);"
+"  xhr.onload = function() {"
+"    if (xhr.status === 200) {"
+"      /*alert(xhr.responseText);*/"
+"    }"
+"    else {"
+"      alert('Request failed.  Returned status of ' + xhr.status);"
+"    }"
+"  };"
+"  xhr.send();"
+"}"
+"var code = document.getElementsByTagName('html')[0].innerHTML"
+"</script>";
+
+
 void setup() 
 {
   initHardware();
@@ -43,6 +78,8 @@ void loop()
     val = 1; // Will write LED high
   else if (req.indexOf("/read") != -1)
     val = -2; // Will print pin reads
+  else if (req.indexOf("/control") != -1)
+    val = -3; // Will print pin reads
   // Otherwise request will be invalid. We'll say as much in HTML
 
   // Set GPIO5 according to the request
@@ -73,10 +110,16 @@ void loop()
   {
     s += "Invalid Request.<br> Try /led/1, /led/0, or /read.";
   }
-  s += "</html>\n";
+  
 
   // Send the response to the client
   client.print(s);
+  delay(1);
+  if (val == -3) {
+    printProgStr(client, controlPage);
+  }
+  delay(1);
+  client.print("</html>\n");
   delay(1);
   Serial.println("Client disonnected");
 
@@ -114,4 +157,12 @@ void initHardware()
   digitalWrite(LED_PIN, LOW);
   // Don't need to set ANALOG_PIN as input, 
   // that's all it can be.
+}
+
+void printProgStr(WiFiClient client, const prog_char str[])
+{
+  char c;
+  if(!str) return;
+  while((c = pgm_read_byte(str++)))
+    client.print(c);
 }
